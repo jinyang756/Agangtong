@@ -56,9 +56,9 @@ export default function LoginPage() {
         <div className="bg-slate-900/60 backdrop-blur-xl rounded-2xl border border-cyan-500/30 p-8 shadow-2xl shadow-cyan-500/20">
           <div className="text-center mb-8">
             <h1 className="text-3xl font-bold bg-gradient-to-r from-cyan-400 to-purple-500 bg-clip-text text-transparent mb-2">
-              赛博朋克交易终端
+              聚财众发A港通交易终端
             </h1>
-            <p className="text-gray-400">登录您的账户</p>
+            <p className="text-gray-400">登录聚财众发A港通交易终端账户</p>
           </div>
 
           {error && (

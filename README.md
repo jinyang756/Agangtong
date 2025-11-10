@@ -1,36 +1,81 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# 赛博朋克交易终端
 
-## Getting Started
+一个基于Next.js的现代化股票交易系统，集成实时数据、AI助手和语音交易功能。
 
-First, run the development server:
+## 技术栈
+
+- **前端框架**: Next.js 16 (App Router)
+- **语言**: TypeScript
+- **状态管理**: Zustand
+- **UI组件**: React, Tailwind CSS
+- **3D图表**: Three.js
+- **实时数据**: WebSocket连接
+- **后端服务**: PocketBase
+- **AI集成**: HuggingFace Transformers
+
+## 系统功能
+
+- 实时股票行情显示
+- 3D K线图可视化
+- 订单簿全息投影
+- 语音交易指令
+- AI投资助手
+- 用户账户管理
+- 交易订单管理
+- 投资组合跟踪
+
+## 本地开发
+
+### 环境要求
+
+- Node.js 18+
+- PocketBase
+
+### 安装依赖
+
+```bash
+npm install
+```
+
+### 启动PocketBase服务
+
+```bash
+cd ../pocketbase
+./pocketbase serve
+```
+
+### 启动开发服务器
 
 ```bash
 npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+打开 [http://localhost:3000](http://localhost:3000) 查看应用。
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+## 部署
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+### Vercel部署
 
-## Learn More
+```bash
+npm run build
+npm run start
+```
 
-To learn more about Next.js, take a look at the following resources:
+### 环境变量
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+需要配置以下环境变量：
+- `NEXT_PUBLIC_POCKETBASE_URL`: PocketBase服务地址
+- `ZHITU_API_TOKEN`: ZhituAPI访问令牌
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+## 项目结构
 
-## Deploy on Vercel
-
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
-
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+```
+trading-frontend/
+├── app/              # 页面路由
+├── components/       # UI组件
+├── lib/              # 工具库
+├── hooks/            # 自定义Hooks
+├── store/            # 状态管理
+├── scripts/          # 脚本工具
+└── public/           # 静态资源
+```

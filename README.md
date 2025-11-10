@@ -24,6 +24,24 @@
 - 交易订单管理
 - 投资组合跟踪
 
+## 项目结构
+
+```
+.
+├── trading-frontend/     # 前端交易系统
+│   ├── app/              # 页面路由
+│   ├── components/       # UI组件
+│   ├── lib/              # 工具库
+│   ├── hooks/            # 自定义Hooks
+│   ├── store/            # 状态管理
+│   ├── scripts/          # 脚本工具
+│   └── public/           # 静态资源
+└── pocketbase/           # 后端服务
+    ├── pb_data/          # 数据库文件
+    ├── pb_migrations/    # 数据库迁移脚本
+    └── pb_hooks/         # 自定义钩子
+```
+
 ## 本地开发
 
 ### 环境要求
@@ -34,19 +52,21 @@
 ### 安装依赖
 
 ```bash
+cd trading-frontend
 npm install
 ```
 
 ### 启动PocketBase服务
 
 ```bash
-cd ../pocketbase
+cd pocketbase
 ./pocketbase serve
 ```
 
 ### 启动开发服务器
 
 ```bash
+cd trading-frontend
 npm run dev
 ```
 
@@ -56,8 +76,14 @@ npm run dev
 
 ### Vercel部署
 
+前端和后端均可部署到Vercel平台：
+
 ```bash
+# 前端构建
+cd trading-frontend
 npm run build
+
+# 启动生产服务
 npm run start
 ```
 
@@ -66,16 +92,3 @@ npm run start
 需要配置以下环境变量：
 - `NEXT_PUBLIC_POCKETBASE_URL`: PocketBase服务地址
 - `ZHITU_API_TOKEN`: ZhituAPI访问令牌
-
-## 项目结构
-
-```
-trading-frontend/
-├── app/              # 页面路由
-├── components/       # UI组件
-├── lib/              # 工具库
-├── hooks/            # 自定义Hooks
-├── store/            # 状态管理
-├── scripts/          # 脚本工具
-└── public/           # 静态资源
-```

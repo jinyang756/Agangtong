@@ -133,6 +133,15 @@ export default function LoginPage() {
               忘记密码？
             </button>
           </div>
+
+          <div className="mt-8 text-center text-xs text-gray-500">
+            <span>隐私政策</span>
+            <span className="mx-2">|</span>
+            <span>用户声明</span>
+            <div className="mt-1">
+              © {new Date().getFullYear()} 武汉聚财众发私募管理有限公司
+            </div>
+          </div>
         </div>
       </div>
     </div>

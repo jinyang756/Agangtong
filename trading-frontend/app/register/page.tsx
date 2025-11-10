@@ -11,7 +11,7 @@ export default function RegisterPage() {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
-  const [initialFunds, setInitialFunds] = useState('100000');
+  const [initialFunds, setInitialFunds] = useState('0');
   const [error, setError] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const router = useRouter();
@@ -44,8 +44,8 @@ export default function RegisterPage() {
         username,
         email,
         password,
-        passwordConfirm: password,
-        funds: parseFloat(initialFunds) || 100000
+        passwordConfirm: password
+        // 资金由后端管理，不在注册时设置
       });
 
       // 自动登录
@@ -55,16 +55,16 @@ export default function RegisterPage() {
       setAccount({
         id: authData.record.id,
         username: authData.record.username,
-        email: authData.record.email,
-        funds: authData.record.funds || parseFloat(initialFunds) || 100000
+        email: authData.record.email
+        // 资金由后端管理，不在前端状态中保存
       });
 
       // 记录注册日志
       logAccount('用户注册', { 
         userId: authData.record.id, 
         username: authData.record.username,
-        email: authData.record.email,
-        initialFunds: parseFloat(initialFunds) || 100000
+        email: authData.record.email
+        // 资金由后端管理，不在日志中记录初始资金
       });
 
       // 跳转到主页
@@ -161,21 +161,7 @@ export default function RegisterPage() {
               />
             </div>
 
-            <div>
-              <label htmlFor="initialFunds" className="block text-sm font-medium text-gray-300 mb-2">
-                初始资金
-              </label>
-              <input
-                id="initialFunds"
-                type="number"
-                value={initialFunds}
-                onChange={(e) => setInitialFunds(e.target.value)}
-                className="w-full px-4 py-3 bg-slate-800/50 border border-cyan-500/30 rounded-lg focus:ring-2 focus:ring-cyan-500 focus:border-transparent transition-all backdrop-blur-sm text-white"
-                placeholder="请输入初始资金"
-                required
-                disabled={isLoading}
-              />
-            </div>
+            {/* 初始资金由后端管理，不在注册页面设置 */}
 
             <button
               type="submit"

@@ -13,8 +13,8 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "赛博朋克交易终端",
-  description: "基于 trading-simulator 的现代化交易终端",
+  title: "聚财众发A港通交易终端",
+  description: "智领未来，财富共赢 - 专业A股港股交易终端",
 };
 
 export default function RootLayout({

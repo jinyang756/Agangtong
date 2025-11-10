@@ -449,8 +449,8 @@ export async function createSampleUser() {
             username: 'testuser',
             email: 'test@example.com',
             password: 'test123456',
-            passwordConfirm: 'test123456',
-            balance: 100000
+            passwordConfirm: 'test123456'
+            // 资金由后端管理，不在创建用户时设置
         });
         console.log('示例用户创建成功:', user);
         return user;

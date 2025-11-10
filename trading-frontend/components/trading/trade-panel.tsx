@@ -1,215 +1,208 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useTradingStore } from '@/store/trading-store';
-// @ts-ignore
-import { LimitOrder, MarketOrder } from 'trading-simulator';
+import { logTrade, logError } from '@/lib/logger';
+import pb from '@/lib/pocketbase';
+
+interface Order {
+  id: string;
+  type: 'buy' | 'sell';
+  stockCode: string;
+  price: number;
+  quantity: number;
+  timestamp: Date;
+  status: 'pending' | 'completed' | 'cancelled';
+}
 
 interface TradePanelProps {
-  stockCode: string;
-  currentPrice: number;
+  stockCode?: string;
+  currentPrice?: number;
 }
 
 export default function TradePanel({ stockCode, currentPrice }: TradePanelProps) {
-  const { account, addOrder } = useTradingStore();
-  const [orderType, setOrderType] = useState<'limit' | 'market'>('limit');
-  const [tradeType, setTradeType] = useState<'buy' | 'sell'>('buy');
-  const [price, setPrice] = useState(currentPrice.toString());
-  const [quantity, setQuantity] = useState('100');
+  const { account, currentStock, marketType, addOrder } = useTradingStore();
+  const [price, setPrice] = useState(currentPrice?.toString() || '');
+  const [quantity, setQuantity] = useState('');
+  const [orderType, setOrderType] = useState<'buy' | 'sell'>('buy');
   const [error, setError] = useState('');
-  const [success, setSuccess] = useState('');
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
-  const handleSubmitOrder = (e: React.FormEvent) => {
+  // 当currentPrice变化时更新价格输入框
+  useEffect(() => {
+    if (currentPrice) {
+      setPrice(currentPrice.toString());
+    }
+  }, [currentPrice]);
+
+  const handleSubmitOrder = async (e: React.FormEvent) => {
     e.preventDefault();
     
     if (!account) {
-      setError('请先登录账户');
+      const errorMsg = '请先登录账户';
+      setError(errorMsg);
+      logError('交易失败', new Error(errorMsg));
       return;
     }
     
-    const qty = parseInt(quantity);
-    const orderPrice = orderType === 'limit' ? parseFloat(price) : currentPrice;
+    const priceNum = parseFloat(price);
+    const quantityNum = parseInt(quantity);
     
-    if (isNaN(qty) || qty <= 0) {
-      setError('请输入有效的数量');
+    // 验证输入
+    if (isNaN(priceNum) || isNaN(quantityNum) || priceNum <= 0 || quantityNum <= 0) {
+      const errorMsg = '请输入有效的价格和数量';
+      setError(errorMsg);
+      logError('交易失败', new Error(errorMsg));
       return;
     }
     
-    if (orderType === 'limit' && (isNaN(orderPrice) || orderPrice <= 0)) {
-      setError('请输入有效的价格');
-      return;
-    }
+    setIsSubmitting(true);
+    setError('');
     
     try {
       // 创建订单对象
-      let order;
-      if (orderType === 'limit') {
-        // @ts-ignore
-        order = new LimitOrder({
-          stockCode,
-          price: orderPrice,
-          quantity: qty,
-          type: tradeType
-        });
-      } else {
-        // @ts-ignore
-        order = new MarketOrder({
-          stockCode,
-          quantity: qty,
-          type: tradeType
+      const order: Order = {
+        id: Math.random().toString(36).substr(2, 9),
+        type: orderType,
+        stockCode: stockCode || currentStock,
+        price: priceNum,
+        quantity: quantityNum,
+        timestamp: new Date(),
+        status: 'pending'
+      };
+      
+      // 保存订单到PocketBase
+      if (pb.authStore.isValid) {
+        await pb.collection('orders').create({
+          userId: account.id,
+          type: orderType,
+          stockCode: stockCode || currentStock,
+          price: priceNum,
+          quantity: quantityNum,
+          status: 'pending'
         });
       }
       
-      // 在实际应用中，这里会调用后端API提交订单
-      // 目前我们直接更新本地状态
-      addOrder({
-        id: Date.now().toString(),
-        ...order,
-        timestamp: new Date().toISOString(),
-        status: '已提交'
-      });
+      // 添加到状态管理
+      addOrder(order);
       
-      setSuccess(`${tradeType === 'buy' ? '买入' : '卖出'}订单已提交`);
-      setQuantity('100');
-      if (orderType === 'limit') {
-        setPrice(currentPrice.toString());
-      }
-      setError('');
+      // 记录交易日志
+      logTrade('提交订单', order, { success: true, message: '订单已提交' });
       
-      // 3秒后清除成功消息
-      setTimeout(() => setSuccess(''), 3000);
-    } catch (err) {
-      setError('订单提交失败，请稍后重试');
-      console.error(err);
+      // 清空表单
+      setPrice(currentPrice?.toString() || '');
+      setQuantity('');
+      
+      // 显示成功消息（实际项目中可能需要更复杂的处理）
+      console.log('订单已提交:', order);
+    } catch (err: any) {
+      // 提供更友好的错误提示
+      const errorMsg = err.message && typeof err.message === 'string' 
+        ? `订单提交失败: ${err.message}` 
+        : '订单提交失败，请稍后重试';
+      
+      setError(errorMsg);
+      logError('订单提交错误', err);
+      console.error('订单提交错误:', err);
+    } finally {
+      setIsSubmitting(false);
     }
   };
 
   return (
-    <div className="bg-slate-900/60 backdrop-blur-xl rounded-2xl border border-cyan-500/30 p-6">
-      <h2 className="text-xl font-semibold text-cyan-300 mb-4">交易面板</h2>
+    <div className="bg-slate-900/60 backdrop-blur-xl rounded-2xl border border-cyan-500/30 p-6 shadow-2xl shadow-cyan-500/20">
+      <h2 className="text-xl font-bold bg-gradient-to-r from-cyan-400 to-purple-500 bg-clip-text text-transparent mb-6">
+        交易面板
+      </h2>
       
       {error && (
-        <div className="mb-4 p-3 bg-red-500/20 border border-red-500/30 rounded-lg text-red-300 text-sm">
+        <div className="mb-4 p-3 bg-red-900/50 border border-red-500/50 rounded-lg text-red-300 text-sm">
           {error}
         </div>
       )}
       
-      {success && (
-        <div className="mb-4 p-3 bg-emerald-500/20 border border-emerald-500/30 rounded-lg text-emerald-300 text-sm">
-          {success}
-        </div>
-      )}
-      
       <form onSubmit={handleSubmitOrder} className="space-y-4">
-        <div className="grid grid-cols-2 gap-4">
+        <div className="flex gap-2">
           <button
             type="button"
-            onClick={() => setTradeType('buy')}
-            className={`py-2 rounded-lg font-medium transition-all ${
-              tradeType === 'buy'
-                ? 'bg-emerald-500/30 text-emerald-300 border border-emerald-500/50'
-                : 'bg-slate-800/50 text-gray-400 border border-slate-700'
+            onClick={() => setOrderType('buy')}
+            className={`flex-1 py-2 px-4 rounded-lg font-medium transition-all ${
+              orderType === 'buy'
+                ? 'bg-green-600 text-white'
+                : 'bg-slate-800 text-gray-300 hover:bg-slate-700'
             }`}
           >
             买入
           </button>
           <button
             type="button"
-            onClick={() => setTradeType('sell')}
-            className={`py-2 rounded-lg font-medium transition-all ${
-              tradeType === 'sell'
-                ? 'bg-red-500/30 text-red-300 border border-red-500/50'
-                : 'bg-slate-800/50 text-gray-400 border border-slate-700'
+            onClick={() => setOrderType('sell')}
+            className={`flex-1 py-2 px-4 rounded-lg font-medium transition-all ${
+              orderType === 'sell'
+                ? 'bg-red-600 text-white'
+                : 'bg-slate-800 text-gray-300 hover:bg-slate-700'
             }`}
           >
             卖出
           </button>
         </div>
         
-        <div className="grid grid-cols-2 gap-4">
-          <button
-            type="button"
-            onClick={() => setOrderType('limit')}
-            className={`py-2 rounded-lg font-medium transition-all ${
-              orderType === 'limit'
-                ? 'bg-cyan-500/30 text-cyan-300 border border-cyan-500/50'
-                : 'bg-slate-800/50 text-gray-400 border border-slate-700'
-            }`}
-          >
-            限价单
-          </button>
-          <button
-            type="button"
-            onClick={() => setOrderType('market')}
-            className={`py-2 rounded-lg font-medium transition-all ${
-              orderType === 'market'
-                ? 'bg-purple-500/30 text-purple-300 border border-purple-500/50'
-                : 'bg-slate-800/50 text-gray-400 border border-slate-700'
-            }`}
-          >
-            市价单
-          </button>
-        </div>
-        
-        {orderType === 'limit' && (
-          <div>
-            <label className="block text-sm font-medium text-gray-300 mb-2">
-              价格
-            </label>
-            <input
-              type="number"
-              value={price}
-              onChange={(e) => setPrice(e.target.value)}
-              className="w-full bg-slate-800 border border-cyan-500/30 rounded-lg px-4 py-2 text-white placeholder-gray-400 focus:outline-none focus:border-cyan-500 focus:ring-1 focus:ring-cyan-500"
-              placeholder="输入价格"
-              step="0.01"
-              min="0"
-            />
-          </div>
-        )}
-        
         <div>
           <label className="block text-sm font-medium text-gray-300 mb-2">
-            数量
+            股票代码
+          </label>
+          <div className="px-4 py-3 bg-slate-800/50 border border-cyan-500/30 rounded-lg text-white">
+            {(stockCode || currentStock)} ({marketType})
+          </div>
+        </div>
+        
+        <div>
+          <label htmlFor="price" className="block text-sm font-medium text-gray-300 mb-2">
+            价格
           </label>
           <input
+            id="price"
             type="number"
-            value={quantity}
-            onChange={(e) => setQuantity(e.target.value)}
-            className="w-full bg-slate-800 border border-cyan-500/30 rounded-lg px-4 py-2 text-white placeholder-gray-400 focus:outline-none focus:border-cyan-500 focus:ring-1 focus:ring-cyan-500"
-            placeholder="输入数量"
-            min="1"
+            step="0.01"
+            value={price}
+            onChange={(e) => setPrice(e.target.value)}
+            className="w-full px-4 py-3 bg-slate-800/50 border border-cyan-500/30 rounded-lg focus:ring-2 focus:ring-cyan-500 focus:border-transparent transition-all backdrop-blur-sm text-white"
+            placeholder="请输入价格"
+            required
+            disabled={isSubmitting}
           />
         </div>
         
-        <div className="bg-slate-800/50 rounded-lg p-4">
-          <div className="flex justify-between text-sm">
-            <span className="text-gray-400">股票代码</span>
-            <span className="text-white">{stockCode}</span>
-          </div>
-          <div className="flex justify-between text-sm mt-1">
-            <span className="text-gray-400">当前价格</span>
-            <span className="text-white">¥{currentPrice.toFixed(2)}</span>
-          </div>
-          <div className="flex justify-between text-sm mt-1">
-            <span className="text-gray-400">交易类型</span>
-            <span className={tradeType === 'buy' ? 'text-emerald-400' : 'text-red-400'}>
-              {tradeType === 'buy' ? '买入' : '卖出'}
-            </span>
-          </div>
-          <div className="flex justify-between text-sm mt-1">
-            <span className="text-gray-400">订单类型</span>
-            <span className={orderType === 'limit' ? 'text-cyan-400' : 'text-purple-400'}>
-              {orderType === 'limit' ? '限价单' : '市价单'}
-            </span>
-          </div>
+        <div>
+          <label htmlFor="quantity" className="block text-sm font-medium text-gray-300 mb-2">
+            数量
+          </label>
+          <input
+            id="quantity"
+            type="number"
+            step="1"
+            value={quantity}
+            onChange={(e) => setQuantity(e.target.value)}
+            className="w-full px-4 py-3 bg-slate-800/50 border border-cyan-500/30 rounded-lg focus:ring-2 focus:ring-cyan-500 focus:border-transparent transition-all backdrop-blur-sm text-white"
+            placeholder="请输入数量"
+            required
+            disabled={isSubmitting}
+          />
         </div>
         
         <button
           type="submit"
-          className="w-full bg-gradient-to-r from-cyan-500 to-purple-600 py-3 rounded-lg text-white font-medium hover:shadow-lg hover:shadow-cyan-500/30 transition-all"
+          disabled={isSubmitting}
+          className="w-full py-3 px-4 bg-gradient-to-r from-cyan-600 to-purple-600 hover:from-cyan-500 hover:to-purple-500 rounded-lg font-medium transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed text-white"
         >
-          {tradeType === 'buy' ? '买入' : '卖出'}
+          {isSubmitting ? (
+            <span className="flex items-center justify-center">
+              <span className="h-4 w-4 border-2 border-white border-t-transparent rounded-full animate-spin mr-2"></span>
+              提交中...
+            </span>
+          ) : (
+            `${orderType === 'buy' ? '买入' : '卖出'} ${stockCode || currentStock}`
+          )}
         </button>
       </form>
     </div>

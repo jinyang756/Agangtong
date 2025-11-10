@@ -1,91 +1,166 @@
 'use client';
-import { useEffect, useState } from 'react';
-import { motion } from 'framer-motion';
 
-interface OrderBookData {
-  bids: [number, number][]; // [价格, 数量]
-  asks: [number, number][];
-}
+import { useEffect, useRef } from 'react';
+import * as THREE from 'three';
 
 interface OrderBookHologramProps {
-  data?: OrderBookData;
+  data: {
+    bids: { price: number; quantity: number }[];
+    asks: { price: number; quantity: number }[];
+  } | null;
 }
 
 export default function OrderBookHologram({ data }: OrderBookHologramProps) {
-  const [orderBook, setOrderBook] = useState<OrderBookData>({
-    bids: Array.from({ length: 10 }, (_, i) => [100 - i * 0.1, Math.random() * 1000]),
-    asks: Array.from({ length: 10 }, (_, i) => [100 + i * 0.1, Math.random() * 1000]),
-  });
-
-  // 如果传入了真实数据，则使用真实数据
+  const mountRef = useRef<HTMLDivElement>(null);
+  
   useEffect(() => {
-    if (data) {
-      setOrderBook(data);
-    }
-  }, [data]);
-
-  // 模拟实时更新（仅在没有真实数据时）
-  useEffect(() => {
-    if (data) return; // 如果有真实数据，不进行模拟更新
+    if (!mountRef.current || !data) return;
     
-    const interval = setInterval(() => {
-      setOrderBook(prev => ({
-        bids: prev.bids.map(([price, amount]) => [price, amount * (0.95 + Math.random() * 0.1)]),
-        asks: prev.asks.map(([price, amount]) => [price, amount * (0.95 + Math.random() * 0.1)]),
-      }));
-    }, 500);
-    return () => clearInterval(interval);
+    // 清空之前的渲染
+    mountRef.current.innerHTML = '';
+    
+    // 初始化场景
+    const scene = new THREE.Scene();
+    scene.background = new THREE.Color(0x020617);
+    
+    // 初始化相机
+    const camera = new THREE.PerspectiveCamera(
+      75,
+      mountRef.current.clientWidth / mountRef.current.clientHeight,
+      0.1,
+      1000
+    );
+    camera.position.set(0, 0, 10);
+    
+    // 初始化渲染器
+    const renderer = new THREE.WebGLRenderer({ antialias: true });
+    renderer.setSize(mountRef.current.clientWidth, mountRef.current.clientHeight);
+    renderer.setPixelRatio(window.devicePixelRatio);
+    mountRef.current.appendChild(renderer.domElement);
+    
+    // 添加光源
+    const ambientLight = new THREE.AmbientLight(0x404040, 2);
+    scene.add(ambientLight);
+    
+    const directionalLight = new THREE.DirectionalLight(0xffffff, 1);
+    directionalLight.position.set(5, 5, 5);
+    scene.add(directionalLight);
+    
+    // 创建订单簿可视化
+    const group = new THREE.Group();
+    
+    // 获取最高价格和最大数量用于缩放
+    const allPrices = [...data.bids, ...data.asks].map(item => item.price);
+    const allQuantities = [...data.bids, ...data.asks].map(item => item.quantity);
+    const maxPrice = Math.max(...allPrices);
+    const minPrice = Math.min(...allPrices);
+    const maxQuantity = Math.max(...allQuantities);
+    
+    // 创建买单可视化（绿色）
+    data.bids.forEach((bid, index) => {
+      const normalizedPrice = (bid.price - minPrice) / (maxPrice - minPrice);
+      const normalizedQuantity = bid.quantity / maxQuantity;
+      
+      const geometry = new THREE.BoxGeometry(0.5, normalizedQuantity * 3, 0.5);
+      const material = new THREE.MeshPhongMaterial({ 
+        color: 0x00ff00,
+        transparent: true,
+        opacity: 0.8
+      });
+      const cube = new THREE.Mesh(geometry, material);
+      
+      cube.position.set(
+        -1.5, // 左侧
+        normalizedPrice * 4 - 2, // 垂直位置基于价格
+        0
+      );
+      
+      group.add(cube);
+    });
+    
+    // 创建卖单可视化（红色）
+    data.asks.forEach((ask, index) => {
+      const normalizedPrice = (ask.price - minPrice) / (maxPrice - minPrice);
+      const normalizedQuantity = ask.quantity / maxQuantity;
+      
+      const geometry = new THREE.BoxGeometry(0.5, normalizedQuantity * 3, 0.5);
+      const material = new THREE.MeshPhongMaterial({ 
+        color: 0xff0000,
+        transparent: true,
+        opacity: 0.8
+      });
+      const cube = new THREE.Mesh(geometry, material);
+      
+      cube.position.set(
+        1.5, // 右侧
+        normalizedPrice * 4 - 2, // 垂直位置基于价格
+        0
+      );
+      
+      group.add(cube);
+    });
+    
+    scene.add(group);
+    
+    // 添加旋转动画
+    const animate = () => {
+      requestAnimationFrame(animate);
+      
+      // 缓慢旋转
+      group.rotation.y += 0.005;
+      
+      renderer.render(scene, camera);
+    };
+    
+    animate();
+    
+    // 窗口大小调整
+    const handleResize = () => {
+      if (!mountRef.current) return;
+      
+      camera.aspect = mountRef.current.clientWidth / mountRef.current.clientHeight;
+      camera.updateProjectionMatrix();
+      renderer.setSize(mountRef.current.clientWidth, mountRef.current.clientHeight);
+    };
+    
+    window.addEventListener('resize', handleResize);
+    
+    // 清理函数
+    return () => {
+      window.removeEventListener('resize', handleResize);
+      if (mountRef.current) {
+        mountRef.current.removeChild(renderer.domElement);
+      }
+    };
   }, [data]);
-
+  
+  if (!data) {
+    return (
+      <div className="bg-slate-900/60 backdrop-blur-xl rounded-2xl border border-cyan-500/30 p-6 h-96 flex items-center justify-center">
+        <div className="text-center">
+          <div className="h-8 w-8 border-2 border-cyan-500 border-t-transparent rounded-full animate-spin mx-auto mb-4"></div>
+          <p className="text-gray-400">加载订单簿中...</p>
+        </div>
+      </div>
+    );
+  }
+  
   return (
-    <div className="relative h-96 bg-slate-900/50 rounded-xl p-4 border border-emerald-500/30 overflow-hidden">
-      {/* 全息网格背景 */}
-      <div className="absolute inset-0 opacity-10">
-        <div className="h-full w-full" style={{
-          backgroundImage: 'repeating-linear-gradient(0deg, transparent, transparent 19px, #10b981 19px, #10b981 20px), repeating-linear-gradient(90deg, transparent, transparent 19px, #10b981 19px, #10b981 20px)',
-        }} />
-      </div>
-
-      <div className="relative z-10 grid grid-cols-2 gap-4 h-full">
-        {/* 买盘 */}
-        <div className="space-y-1">
-          <h4 className="text-emerald-400 text-sm font-mono mb-2">买盘 BIDS</h4>
-          {orderBook.bids.map(([price, amount], idx) => (
-            <motion.div
-              key={idx}
-              className="flex justify-between items-center text-xs p-1 rounded hover:bg-emerald-500/10 transition-colors"
-              animate={{ opacity: [0.5, 1] }}
-              transition={{ duration: 0.5 }}
-            >
-              <span className="text-emerald-400 font-mono">{price.toFixed(2)}</span>
-              <span className="text-gray-300">{amount.toFixed(0)}</span>
-              <div className="w-20 h-2 bg-gradient-to-r from-emerald-500 to-transparent rounded" 
-                   style={{ width: `${(amount / 1000) * 80}px` }} />
-            </motion.div>
-          ))}
+    <div className="bg-slate-900/60 backdrop-blur-xl rounded-2xl border border-cyan-500/30 p-6">
+      <h2 className="text-xl font-bold bg-gradient-to-r from-cyan-400 to-purple-500 bg-clip-text text-transparent mb-4">
+        订单簿全息图
+      </h2>
+      <div ref={mountRef} className="w-full h-80 rounded-lg overflow-hidden" />
+      <div className="mt-4 text-xs text-gray-400 flex justify-between">
+        <div>
+          <span className="inline-block w-3 h-3 bg-green-500 mr-1"></span>
+          买单
         </div>
-
-        {/* 卖盘 */}
-        <div className="space-y-1">
-          <h4 className="text-red-400 text-sm font-mono mb-2">卖盘 ASKS</h4>
-          {orderBook.asks.map(([price, amount], idx) => (
-            <motion.div
-              key={idx}
-              className="flex justify-between items-center text-xs p-1 rounded hover:bg-red-500/10 transition-colors"
-              animate={{ opacity: [0.5, 1] }}
-              transition={{ duration: 0.5 }}
-            >
-              <div className="w-20 h-2 bg-gradient-to-r from-transparent to-red-500 rounded" 
-                   style={{ width: `${(amount / 1000) * 80}px` }} />
-              <span className="text-gray-300">{amount.toFixed(0)}</span>
-              <span className="text-red-400 font-mono">{price.toFixed(2)}</span>
-            </motion.div>
-          ))}
+        <div>
+          <span className="inline-block w-3 h-3 bg-red-500 mr-1"></span>
+          卖单
         </div>
       </div>
-
-      {/* 全息光效 */}
-      <div className="absolute top-0 left-0 right-0 h-1 bg-gradient-to-r from-emerald-500 via-cyan-500 to-red-500 animate-pulse" />
     </div>
   );
 }

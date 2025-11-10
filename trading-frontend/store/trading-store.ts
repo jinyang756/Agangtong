@@ -23,8 +23,8 @@ export const useTradingStore = create<TradingState>()(
     persist(
       (set) => ({
         account: null,
-        currentStock: '000001',
-        marketType: 'A股',
+        currentStock: '000001', // 默认股票代码
+        marketType: 'A股', // 默认市场类型
         orders: [],
         portfolio: [],
         setAccount: (account) => set({ account }),

@@ -1,0 +1,10 @@
+{
+  "name": "simple_test",
+  "type": "base",
+  "fields": [
+    {
+      "name": "test_field",
+      "type": "text"
+    }
+  ]
+}

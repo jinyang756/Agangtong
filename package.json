@@ -1,5 +1,6 @@
 {
   "dependencies": {
-    "@huggingface/transformers": "^3.7.6"
+    "@huggingface/transformers": "^3.7.6",
+    "pocketbase": "^0.26.3"
   }
 }

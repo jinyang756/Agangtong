@@ -2,17 +2,21 @@ import { useEffect, useState } from 'react';
 
 export const useVoiceTrading = () => {
   const [isListening, setIsListening] = useState(false);
-  const recognition = typeof window !== 'undefined' ? 
-    new (window as any).webkitSpeechRecognition() : null;
+  const [recognition, setRecognition] = useState<any>(null);
 
   useEffect(() => {
-    if (recognition) {
-      recognition.continuous = false;
-      recognition.lang = 'zh-CN';
-      recognition.onresult = (event: any) => {
+    // 确保只在客户端初始化语音识别
+    if (typeof window !== 'undefined' && 'webkitSpeechRecognition' in window) {
+      const speechRecognition = new (window as any).webkitSpeechRecognition();
+      speechRecognition.continuous = false;
+      speechRecognition.lang = 'zh-CN';
+      
+      speechRecognition.onresult = (event: any) => {
         const command = event.results[0][0].transcript;
         parseVoiceCommand(command);
       };
+      
+      setRecognition(speechRecognition);
     }
   }, []);
 
@@ -32,8 +36,10 @@ export const useVoiceTrading = () => {
   };
 
   const startListening = () => {
-    recognition?.start();
-    setIsListening(true);
+    if (recognition) {
+      recognition.start();
+      setIsListening(true);
+    }
   };
 
   return { isListening, startListening, parseVoiceCommand };

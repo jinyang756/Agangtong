@@ -1,9 +1,4 @@
 {
-<<<<<<< HEAD
-  "dependencies": {
-    "@huggingface/transformers": "^3.7.6",
-    "pocketbase": "^0.26.3"
-=======
   "name": "trading-frontend",
   "version": "0.1.0",
   "private": true,
@@ -40,6 +35,5 @@
     "eslint-config-next": "16.0.1",
     "tailwindcss": "^4",
     "typescript": "^5"
->>>>>>> 94326d2388f59876e567e52099c6b0f090232cd1
   }
 }
